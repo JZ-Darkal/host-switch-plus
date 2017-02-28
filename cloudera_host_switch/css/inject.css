@@ -1,0 +1,11 @@
+.currentModeOnly td{
+    max-width:20px;
+    overflow:hidden
+}
+#nameservices td{
+    width: 20px;
+    overflow:inherit;
+}
+#nameservices th{
+    width: 20px;
+}

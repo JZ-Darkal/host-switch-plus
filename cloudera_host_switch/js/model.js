@@ -13,6 +13,51 @@
  */
 
 (function (window) {
+
+    var enableHosts = [];
+
+    var interceptRequest = function interceptRequest(request){
+        var newUrl = request.url;
+        if(/http:\/\/cm\d+.wxsq.jd.com:\d+\/*/.test(request.url)==true){
+            var href=request.url.replace('http://','');
+            var port=href.split(':')[1].split('/')[0];
+            var param=href.replace(href.split('/')[0],'')||'';
+            newUrl ='http://'+port+'.'+href.split(':')[0].split('.')[0]+'.cm.wqadmin.jd.com'+param;
+            console.log("WQ Cloudera Plugin:"+href+" => "+newUrl);
+        }
+        return { redirectUrl: newUrl };
+    };
+
+    if(!chrome.webRequest.onBeforeRequest.hasListener(interceptRequest)){
+        console.log('WQ Cloudera Plugin','set interceptRequest');
+        chrome.webRequest.onBeforeRequest.addListener(interceptRequest, { urls: ['http://*.wxsq.jd.com/*'] }, ['blocking']);
+    }
+
+    if(!localStorage['hosts']){
+        localStorage['hosts-count'] = 2;
+        localStorage['default_mode'] = "\"SYSTEM\"";
+        localStorage['hosts'] = '{"1":{"id":1,"ip":"10.191.217.203","domain":"*.cm.wqadmin.jd.com","note":"","tags":["Cloudera"],"status":1,"order":"1","uptime":"2017-02-28 15:05:54"},"2":{"id":2,"ip":"10.191.217.203","domain":"cm.wqadmin.jd.com","note":"","tags":["Cloudera"],"status":1,"order":"2","uptime":"2017-02-28 15:04:59"}}';
+    }
+
+    chrome.webRequest.onCompleted.addListener(function (details) {
+        //data[details.tabId] = details.ip;
+        setTimeout(function(){
+            details.req = 'showip';
+            details.hosts = enableHosts;
+            chrome.tabs.sendRequest(details.tabId, details, function (response) {
+                // console.log('res:', response);
+            });
+        },1000);
+    }, {
+        urls: [ 'http://*/*', 'https://*/*' ],
+        types: [ 'main_frame' ]
+    });
+
+    chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+        enableHosts = request;
+    });
+
+
     var model = {};
 
     //推荐的ip
@@ -267,7 +312,7 @@
     }
 
     model.getDefaultMode = function(){
-        return loadData('default_mode') ? loadData('default_mode') : 'DIRECT';
+        return loadData('default_mode') ? loadData('default_mode') : 'SYSTEM';
     }
 
     model.getEnabledHosts=function(){
@@ -457,6 +502,8 @@
 
     // init status as true
     if( localStorage['status'] === undefined ){
-        model.setStatus(true, 'DIRECT');
+        model.setStatus(true, 'SYSTEM');
     }
+
+    model.reload();
 })(window);
